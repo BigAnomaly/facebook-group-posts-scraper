@@ -1,194 +1,138 @@
-[Facebook Group Posts Scraper](https://apify.com/logical_scrapers/facebook-group-posts-scraper?fpr=data)
+[Facebook Group Posts Scraper](https://apify.com/crowdpull/facebook-group-posts-scraper?fpr=data)
 
-Transform how you analyze Facebook groups! This powerful tool helps businesses, researchers, and marketers extract valuable insights from public Facebook groups. Whether you're tracking market trends, conducting research, or monitoring social engagement, our scraper delivers the data you need.
+# CrowdPull FB Group Posts Scraper
 
-## 🌟 Why Choose This Scraper?
+Extract posts from any **public** Facebook group — no login or cookies required.
 
-- ⚡ **Lightning Fast**: Extract hundreds of posts in minutes
-- 🎯 **Precision Targeting**: Focus on specific groups or analyze multiple groups at once
-- 📊 **Rich Insights**: Capture reactions, comments, shares, and engagement metrics
-- 🔄 **Bulk Processing**: Analyze up to 50 groups in one go
-- 🛡️ **Reliable & Stable**: Built for consistent, dependable performance
-- 📱 **Modern Interface**: Simple setup, powerful results
+No browser automation — just fast, lightweight HTTP requests for reliable extraction.
 
-## 🎯 Perfect For
+## Features
 
-- 📈 **Market Research**: Track trends and consumer sentiment
-- 🎭 **Social Media Managers**: Monitor engagement and content performance
-- 📚 **Researchers**: Gather data for social media studies
-- 💼 **Business Intelligence**: Analyze competitor activities
-- 🔍 **Lead Generation**: Find potential customers and opportunities
+- **No login required** — extracts posts anonymously from public groups
+- **Smart Scrape (dedup)** — skip posts already scraped in previous runs, saving up to 75% on recurring scrapes
+- **Full post data** — text, author, permalink, timestamp, reactions, comments, images
+- **Date filtering** — extract posts newer than a specific date (ISO or relative: `7d`, `30d`, `6m`)
+- **Author filtering** — find posts from specific contributors or admins
+- **Engagement filtering** — minimum comment/reaction thresholds
+- **Sorting** — chronological (newest first) or algorithmic (top posts)
+- **Multi-group support** — process multiple groups in a single run
+- **Pagination** — automatically scrolls through the full feed
+- **Comment scraper chaining** — automatically trigger the comment scraper after extraction
 
-## 📝 Input Configuration
+## Smart Scrape: How It Saves You Money
 
-### Required Parameters
+Enable **Smart Scrape** to skip posts you've already extracted. The scraper maintains a persistent cache per group that survives across runs indefinitely.
 
-- **`groupUrls`** (array of strings)
+|  | Without Smart Scrape | With Smart Scrape |
+| --- | --- | --- |
+| **Run 1** (500 posts) | 500 × $0.004 = **$2.00** | 500 × $0.004 = **$2.00** |
+| **Run 2** (125 new) | 500 × $0.004 = **$2.00** | 125 new × $0.004 + 375 skip × $0.001 = **$0.875** |
+| **Run 3** (125 new) | 500 × $0.004 = **$2.00** | 125 new × $0.004 + 375 skip × $0.001 = **$0.875** |
+| **Run 4** (125 new) | 500 × $0.004 = **$2.00** | 125 new × $0.004 + 375 skip × $0.001 = **$0.875** |
+| **Monthly total** | **$8.02** | **$4.65** |
+| **Unique posts** | 500 (+ 1,500 duplicates) | 875 (zero duplicates) |
+| **Cost per unique post** | $0.016 | $0.005 |
 
-- Facebook group URLs in any format:
+**42% cheaper per month. 69% cheaper per unique post. Zero duplicate cleanup.**
 
-- Name-based: `https://web.facebook.com/groups/techstartups`
-- ID-based: `https://web.facebook.com/groups/123456789`
-- Min: 1 group, Max: 50 groups
-- Example: `["https://web.facebook.com/groups/techstartups"]`
+### Refresh Window
 
-### Optional Parameters
+Set `refreshWindowDays` to re-check recent posts for updated comment/reaction counts. For example, `refreshWindowDays: 7` re-scrapes posts from the last 7 days even if cached, so you always get fresh engagement data on recent content.
 
-- **`maxResults`** (integer)
+## What you get per post
 
-- Maximum posts to collect per group
-- Range: 1-1000
-- Default: 10
-- Example: `100`
-- **`untilDate`** (string)
+| Field | Description |
+| --- | --- |
+| `postId` | Unique post identifier |
+| `postUrl` | Direct permalink to the post |
+| `postText` | Full post text content |
+| `authorName` | Author's display name |
+| `authorProfileUrl` | Link to author's profile |
+| `timestamp` | ISO 8601 timestamp |
+| `commentCount` | Number of comments |
+| `reactionCount` | Number of reactions |
+| `imageUrls` | Array of image URLs attached to the post |
+| `sharedLinks` | URLs shared in the post text |
+| `groupUrl` | Source group URL |
 
-- Stop collecting posts older than this date
-- Format: YYYY-MM-DD
-- Example: `"2024-01-01"`
-- Note: When set, forces sorting to CHRONOLOGICAL
-- **`sortingSetting`** (string)
+## How it works
 
-- How to sort posts when scraping
-- Options:
+1. Fetches the group page anonymously — no login, no cookies, no browser
+2. Extracts structured post data from Facebook's response
+3. Checks each post against the dedup cache (if Smart Scrape is enabled)
+4. Paginates automatically until `maxPosts` reached or feed exhausted
+5. Saves updated cache for next run
 
-- `"RECENT_ACTIVITY"`: Latest activity first
-- `"CHRONOLOGICAL"`: Newest posts first
-- `"TOP_POSTS"`: Most engaging posts first
-- Default: `"CHRONOLOGICAL"`
-- Note: Ignored if untilDate is set
+## Input examples
 
-### Input Example
-
-```
-{
-  "groupUrls": [
-    "https://web.facebook.com/groups/techstartups",
-    "https://web.facebook.com/groups/123456789"
-  ],
-  "maxResults": 100,
-  "untilDate": "2024-01-01",
-  "sortingSetting": "CHRONOLOGICAL"
-}
-```
-
-## 📊 Output Format
-
-Each post is returned with rich metadata. Here's a detailed example:
+### Basic extraction
 
 ```
 {
-  "post_id": "987654321098765",
-  "creation_time": "2024-01-15T10:30:45.000Z",
-  "message": "🚀 Just launched our new AI product! Looking for beta testers. Comment below if interested! #TechStartup #Innovation",
-  "post_url": "https://web.facebook.com/groups/techstartups/posts/987654321098765",
-  "reactions": {
-    "total": 145,
-    "breakdown": {
-      "like": 89,
-      "love": 32,
-      "wow": 24
-    }
-  },
-  "comments_count": 28,
-  "shares_count": 12,
-  "author": {
-    "id": "100012345678901",
-    "name": "Alex Chen",
-    "url": "https://web.facebook.com/alex.chen.tech"
-  },
-  "attachments": [
-    {
-      "type": "photo",
-      "id": "123456789012345",
-      "url": "https://web.facebook.com/photo.php?fbid=123456789012345",
-      "thumbnail": "https://scontent.example.com/photo123.jpg",
-      "width": 1200,
-      "height": 800,
-      "description": "Product dashboard screenshot showing AI analytics interface",
-      "download_urls": [
-        {
-          "url": "https://scontent.example.com/photo123_high.jpg",
-          "type": "photo_image",
-          "quality": "high",
-          "width": 1200,
-          "height": 800
-        }
-      ]
-    }
+  "startUrls": [
+    { "url": "https://www.facebook.com/groups/homebakeryforbeginners/" }
   ],
-  "facebook_group_url": "https://web.facebook.com/groups/techstartups",
-  "facebook_group_name": "Tech Startups Network"
+  "maxPosts": 25,
+  "sortOrder": "CHRONOLOGICAL"
 }
 ```
 
-### Output Fields Explained
+### Smart Scrape (incremental monitoring)
 
-- **Basic Post Data**
+```
+{
+  "startUrls": [
+    { "url": "https://www.facebook.com/groups/homebakeryforbeginners/" }
+  ],
+  "maxPosts": 100,
+  "enableDedup": true,
+  "refreshWindowDays": 7
+}
+```
 
-- `post_id`: Unique identifier for the post
-- `creation_time`: ISO timestamp of post creation
-- `message`: Post text content (null if no text)
-- `post_url`: Direct link to the post
-- **Engagement Metrics**
+## Output example
 
-- `reactions`: Total count and breakdown by type
-- `comments_count`: Number of comments
-- `shares_count`: Number of shares
-- **Author Information**
+```
+{
+  "postId": "903615849189843",
+  "postUrl": "https://www.facebook.com/groups/homebakeryforbeginners/posts/903615849189843/",
+  "postText": "What St. Patrick's Day themed treats are you planning to make this year?",
+  "authorName": "Sarah Mitchell",
+  "authorProfileUrl": "https://www.facebook.com/sarah.mitchell",
+  "timestamp": "2026-02-25T18:00:00.000Z",
+  "commentCount": 12,
+  "reactionCount": 45,
+  "imageUrls": ["https://scontent.fudi1-1.fna.fbcdn.net/..."],
+  "sharedLinks": [],
+  "groupUrl": "https://www.facebook.com/groups/homebakeryforbeginners/"
+}
+```
 
-- `author.id`: Author's Facebook ID
-- `author.name`: Author's display name
-- `author.url`: Link to author's profile
-- **Media Attachments**
+## Pair with the Comment Scraper
 
-- `attachments`: Array of media (photos, videos, links)
-- Each attachment includes:
+Use this Actor to find high-engagement posts, then feed the `postUrl` values into **[Facebook Post Comment Scraper](https://apify.com/crowdpull/facebook-post-comment-scraper)** to extract all 30+ fields per comment — including demographics, reaction breakdowns, and moderation signals that no other scraper captures.
 
-- Type and ID
-- URLs (original and thumbnail)
-- Dimensions
-- Description
-- Download options
-- **Group Context**
+You can also enable automatic chaining via the `chainCommentScraperTaskId` input to trigger comment extraction automatically after the feed scrape completes.
 
-- `facebook_group_url`: Source group URL
-- `facebook_group_name`: Group name or ID
+## Cost estimate
 
-## 🚀 Key Features
+This Actor uses **no browser** — just lightweight HTTP requests.
 
-- **Smart Date Filtering**: Collect posts from specific time periods
-- **Engagement Metrics**: Track reactions, comments, and shares
-- **Bulk Processing**: Analyze multiple groups simultaneously
-- **Author Details**: Identify key influencers and active members
-- **Post Content**: Capture full message content and attachments
-- **Group Context**: Keep track of post sources and group details
+| Event | Cost |
+| --- | --- |
+| Actor start | $0.005 (one-time per run) |
+| New post extracted | $0.004/post |
+| Cache check (Smart Scrape skip) | $0.001/post |
 
-## 🎮 Easy to Use
+Volume discounts available at Starter, Scale, and Business tiers.
 
-1. **Add Group URLs**: Paste the Facebook group links you want to analyze
-2. **Set Parameters**: Choose how many posts to collect and date ranges
-3. **Get Results**: Receive structured data ready for analysis
+## Is it legal to scrape Facebook groups?
 
-## 📊 Use Cases
+Our scrapers are ethical and do not extract any private user data, such as email addresses, gender, or location. They only extract what the user has chosen to share publicly. We therefore believe that our scrapers, when used for ethical purposes by Apify users, are safe. However, you should be aware that your results could contain personal data. Personal data is protected by the GDPR in the European Union and by other regulations around the world. You should not scrape personal data unless you have a legitimate reason to do so. If you're unsure whether your reason is legitimate, consult your lawyers.
 
-- **Competitor Analysis**: Monitor competitor groups and engagement
-- **Market Research**: Gather customer feedback and preferences
-- **Content Strategy**: Identify trending topics and discussions
-- **Community Management**: Track group activity and engagement
-- **Lead Generation**: Find potential customers and opportunities
-- **Academic Research**: Collect data for social media studies
+## Limitations
 
-## 🤝 Support & Contact
-
-Need help or have questions? We're here to help!
-
-- Email: [coredev.dan@gmail.com](mailto:coredev.dan@gmail.com)
-- Other tools: [Check Other scrapers](https://apify.com/logical_scrapers)
-
-## Keywords
-
-facebook group scraper, facebook data extraction, social media analytics, facebook group analysis, facebook engagement metrics, social media monitoring, facebook group insights, market research tool, social media data collection, facebook group tracker, community analysis tool, social media research, facebook group monitoring, engagement analytics, social media data extraction
-
----
-
-*Note: This tool is designed for public Facebook groups only and should be used in compliance with Facebook's terms of service.*
+- Only works with **public** groups (private groups return 0 posts)
+- Facebook may change internal APIs — report issues if extraction stops
+- Facebook rate limits apply; residential proxies recommended
+- Anonymous API returns `commentCount: 0` for most posts — use the comment scraper for accurate counts
